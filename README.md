@@ -44,34 +44,35 @@ Copy `config.example.json` to `config.json` and fill in your actual tokens.
 prePrompt := `
 輸入單字翻譯為繁體中文，生成 Anki 卡片資料：
 1. 單字、詞性、音標、解釋（繁中）
-2. 同義字、反義字、相關字（最多2個可為空)
-3. 例句、例句翻譯（繁中)
-4. 如果有多個意思則回傳陣列
-5. 同義, 反義, 相關, 例句以多使用多益單字為主
-6. 如果有常搭配的介係詞，請新增欄位 "prepositions"，若無則回傳 ""
+2. 如果有多個字義則回傳陣列
+3. 同義字、反義字、相關字（最多2個nullable)
+4. 相關字也要標註詞性
+5. 例句、例句翻譯（繁中)
+6. 常搭配的介係詞 寫入 ["of",...] ，若無則回傳 []
+7. 同義, 反義, 相關, 例句以多使用多益單字為主
 僅回傳 JSON，範例：
 [{
-  "vocabulary": "concern",
-  "part_of_speech": "verb",
-  "phonetic_transcription": "/kənˈsɜːrn/",
-  "definition": "擔心, 關心",
-  "synonyms": ["worry", "care about"],
-  "antonyms": ["disregard", "ignore"],
-  "related_words": ["anxiety", "interest"],
-  "example_sentence": "She was deeply concerned about the welfare of the local community.",
-  "sentence_translation": "她非常關心當地社區的福祉。",
-  "prepositions": ["about"]
+  "vocabulary": "history",
+  "part_of_speech": "noun",
+  "phonetic_transcription": "/ˈhɪstəri/",
+  "definition": "歷史, 歷史事件",
+  "synonyms": ["past", "chronicle"],
+  "antonyms": ["future", "present"],
+  "related_words": ["historian(noun)", "historic(.adj)"],
+  "example_sentence": "The study **of** **history** helps us understand the world.",
+  "sentence_translation": "歷史的研究幫助我們理解世界。",
+  "prepositions": ["of"]
 }, {
-  "vocabulary": "concern",
-  "part_of_speech": "verb",
-  "phonetic_transcription": "/kənˈsɜːrn/",
-  "definition": "涉及, 關係到",
-  "synonyms": ["involve", "pertain to"],
-  "antonyms": ["exclude", "irrelevant"],
-  "related_words": ["connection", "significance"],
-  "example_sentence": "This new policy concerns all employees in the company.",
-  "sentence_translation": "這項新政策涉及公司所有員工。",
-  "prepositions": [""]
+  "vocabulary": "history",
+  "part_of_speech": "noun",
+  "phonetic_transcription": "/ˈhɪstəri/",
+  "definition": "過去的經歷, 歷史紀錄",
+  "synonyms": ["record", "story"],
+  "antonyms": ["future", "novelty"],
+  "related_words": ["historian"(noun), "historic(.adj)"],
+  "example_sentence": "The **history** **of** this city dates back to the 16th century.",
+  "sentence_translation": "這座城市的歷史可以追溯到16世紀。",
+  "prepositions": ["of"]
 }]
 `
 ```

@@ -1,5 +1,6 @@
 .gitignore
 config/config.json
+config/anki-en-credential.json
 .env
 *.log
 .idea
