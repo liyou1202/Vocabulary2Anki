@@ -10,6 +10,7 @@ type Config struct {
 	TelegramBotToken string `json:"telegram_bot_token"`
 	OpenAIAPIKey     string `json:"openai_api_key"`
 	GoogleSheetId    string `json:"google_sheet_id"`
+	GoogleSheetName  string `json:"google_sheet_name"`
 }
 
 var configuration *Config
