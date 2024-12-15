@@ -11,10 +11,9 @@ import (
 	"os"
 )
 
-// TODO: add Google sheet API to record gpt response
-// TODO: if got "save" command get google sheet element and store as csv at local to batch insert to Anki
+// TODO get google sheet data to cache
 func main() {
-	logFile, err := os.OpenFile("app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	logFile, err := os.OpenFile("./output/app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Fatalf("Failed to open log file: %v", err)
 	}
