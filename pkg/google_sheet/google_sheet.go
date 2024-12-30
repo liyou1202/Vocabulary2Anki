@@ -10,6 +10,7 @@ import (
 	"google.golang.org/api/sheets/v4"
 	"log"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -28,14 +29,26 @@ func NewSheetClient(cfg *config.Config, cache *cache.Cache) (*SheetClient, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Sheets service: %w", err)
 	}
-
-	// TODO fetch google sheet date to fill in cache
-	return &SheetClient{
+	client := &SheetClient{
 		service:   service,
 		cache:     cache,
 		sheetID:   cfg.GoogleSheetId,
 		sheetName: cfg.GoogleSheetName,
-	}, nil
+	}
+
+	all, err := client.fetchAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch sheets all data: %w", err)
+	}
+	for key, value := range all {
+		err := client.cache.Set(key, value)
+		if err != nil {
+			log.Printf("failed to append row to cache key: %s err: %v", key, err)
+			return nil, err
+		}
+	}
+
+	return client, nil
 }
 
 func (c *SheetClient) AppendToSheet(data []model.VocabularyInfo) error {
@@ -77,25 +90,6 @@ func (c *SheetClient) AppendToSheet(data []model.VocabularyInfo) error {
 
 	log.Printf("Successfully inserted %d rows to Google Sheet", len(valuesToWrite))
 	return nil
-}
-
-func (c *SheetClient) getSheetHeader() ([]string, error) {
-	readRange := fmt.Sprintf("%s!1:1", c.sheetName)
-	resp, err := c.service.Spreadsheets.Values.Get(c.sheetID, readRange).Do()
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve sheet header: %v", err)
-	}
-
-	if len(resp.Values) == 0 {
-		return nil, fmt.Errorf("no headers found")
-	}
-
-	headers := make([]string, len(resp.Values[0]))
-	for i, header := range resp.Values[0] {
-		headers[i] = fmt.Sprintf("%v", header)
-	}
-
-	return headers, nil
 }
 
 func (c *SheetClient) getSheetHeaders() ([]string, error) {
@@ -144,4 +138,71 @@ func (c *SheetClient) mapVocabularyToRow(vocabItem model.VocabularyInfo, headers
 	}
 
 	return rowData
+}
+
+func (c *SheetClient) fetchAll() (map[string][]model.VocabularyInfo, error) {
+	header, err := c.getSheetHeaders()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sheet headers: %w", err)
+	}
+
+	lastColumn := string(rune('A' + len(header) - 1))
+	readRange := fmt.Sprintf("%s!A:%s", c.sheetName, lastColumn)
+	resp, err := c.service.Spreadsheets.Values.
+		Get(c.sheetID, readRange).Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve data from sheet: %w", err)
+	}
+
+	if len(resp.Values) == 0 {
+		return nil, fmt.Errorf("no data found in sheet")
+	}
+
+	dataMap := make(map[string][]model.VocabularyInfo, len(resp.Values))
+	for i, row := range resp.Values[1:] {
+		vocabulary, err := c.rowToVocabulary(row, header)
+		if err != nil {
+			log.Printf("failed to convert row to vocabulary at row %d, err: %v", i, err)
+			continue
+		}
+		dataMap[vocabulary.Vocabulary] = append(dataMap[vocabulary.Vocabulary], vocabulary)
+	}
+
+	return dataMap, nil
+}
+
+func (c *SheetClient) rowToVocabulary(row []interface{}, headers []string) (model.VocabularyInfo, error) {
+	vocabInfo := model.VocabularyInfo{}
+	v := reflect.ValueOf(&vocabInfo).Elem()
+	t := v.Type()
+
+	for i, header := range headers {
+		if i >= len(row) {
+			continue
+		}
+		value := fmt.Sprintf("%v", row[i])
+		for j := 0; j < t.NumField(); j++ {
+			field := t.Field(j)
+			tag := field.Tag.Get("json")
+			if tag == header {
+				fieldValue := v.Field(j)
+				switch fieldValue.Kind() {
+				case reflect.Slice:
+					fieldValue.Set(reflect.ValueOf(strings.Split(value, ", ")))
+				case reflect.String:
+					fieldValue.SetString(value)
+				case reflect.Int:
+					intValue, err := strconv.Atoi(value)
+					if err != nil {
+						return vocabInfo, fmt.Errorf("failed to convert value to int: %w", err)
+					}
+					fieldValue.SetInt(int64(intValue))
+				default:
+					return vocabInfo, fmt.Errorf("unsupported field type: %s", fieldValue.Kind())
+				}
+				break
+			}
+		}
+	}
+	return vocabInfo, nil
 }
